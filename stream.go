@@ -50,6 +50,7 @@ type stream struct {
 	finSent        utils.AtomicBool
 	rstSent        utils.AtomicBool
 	writeChan      chan struct{}
+	writeDeadline  time.Time
 
 	flowControlManager flowcontrol.FlowControlManager
 }
@@ -186,14 +187,36 @@ func (s *stream) Write(p []byte) (int, error) {
 	s.onData()
 	s.mutex.Unlock()
 
+	var err error
 	for {
+		s.mutex.Lock()
+		deadline := s.writeDeadline
+		s.mutex.Unlock()
+
+		if !deadline.IsZero() && !time.Now().Before(deadline) {
+			err = errDeadline
+			break
+		}
+
 		s.mutex.Lock()
 		if s.dataForWriting == nil || s.err != nil {
 			s.mutex.Unlock()
 			break
 		}
 		s.mutex.Unlock()
-		<-s.writeChan
+
+		if deadline.IsZero() {
+			<-s.writeChan
+		} else {
+			select {
+			case <-s.writeChan:
+			case <-time.After(deadline.Sub(time.Now())):
+			}
+		}
+	}
+
+	if err != nil {
+		return 0, err
 	}
 
 	s.mutex.Lock()
@@ -308,6 +331,31 @@ func (s *stream) SetReadDeadline(t time.Time) error {
 	if t.Before(oldDeadline) {
 		s.signalRead()
 	}
+	return nil
+}
+
+// SetWriteDeadline sets the deadline for future Write calls
+// and any currently-blocked Write call.
+// Even if write times out, it may return n > 0, indicating that
+// some of the data was successfully written.
+// A zero value for t means Write will not time out.
+func (s *stream) SetWriteDeadline(t time.Time) error {
+	s.mutex.Lock()
+	oldDeadline := s.writeDeadline
+	s.writeDeadline = t
+	s.mutex.Unlock()
+	if t.Before(oldDeadline) {
+		s.signalWrite()
+	}
+	return nil
+}
+
+// SetDeadline sets the read and write deadlines associated
+// with the connection. It is equivalent to calling both
+// SetReadDeadline and SetWriteDeadline.
+func (s *stream) SetDeadline(t time.Time) error {
+	_ = s.SetReadDeadline(t)  // SetReadDeadline never errors
+	_ = s.SetWriteDeadline(t) // SetWriteDeadline never errors
 	return nil
 }
 
