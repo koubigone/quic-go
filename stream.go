@@ -319,9 +319,6 @@ func (s *stream) signalWrite() {
 	}
 }
 
-// SetReadDeadline sets the deadline for future Read calls and
-// any currently-blocked Read call.
-// A zero value for t means Read will not time out.
 func (s *stream) SetReadDeadline(t time.Time) error {
 	s.mutex.Lock()
 	oldDeadline := s.readDeadline
@@ -334,11 +331,6 @@ func (s *stream) SetReadDeadline(t time.Time) error {
 	return nil
 }
 
-// SetWriteDeadline sets the deadline for future Write calls
-// and any currently-blocked Write call.
-// Even if write times out, it may return n > 0, indicating that
-// some of the data was successfully written.
-// A zero value for t means Write will not time out.
 func (s *stream) SetWriteDeadline(t time.Time) error {
 	s.mutex.Lock()
 	oldDeadline := s.writeDeadline
@@ -350,9 +342,6 @@ func (s *stream) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-// SetDeadline sets the read and write deadlines associated
-// with the connection. It is equivalent to calling both
-// SetReadDeadline and SetWriteDeadline.
 func (s *stream) SetDeadline(t time.Time) error {
 	_ = s.SetReadDeadline(t)  // SetReadDeadline never errors
 	_ = s.SetWriteDeadline(t) // SetWriteDeadline never errors
