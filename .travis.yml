@@ -12,6 +12,7 @@ services:
 go:
   - 1.7.x
   - 1.8.x
+  - 1.9beta2
 
 # first part of the GOARCH workaround
 # setting the GOARCH directly doesn't work, since the value will be overwritten later
