@@ -9,5 +9,5 @@ fi
 
 if [ ${TESTMODE} == "integration" ]; then
   ginkgo --randomizeAllSpecs --randomizeSuites --trace --progress -focus "Benchmark"
-  ginkgo -v -r --randomizeAllSpecs --randomizeSuites --trace --progress integrationtests
+  QUIC_GO_LOG_LEVEL=INFO ginkgo -v -r --randomizeAllSpecs --randomizeSuites --trace --progress integrationtests
 fi
